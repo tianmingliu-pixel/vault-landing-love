@@ -1,0 +1,88 @@
+import type { ServiceId } from "./llm-topology";
+
+export const nodeKnowledge = {
+  user: {
+    code: "00 / INTENT",
+    principle: "A person expresses intent through a session; the system must bind each action to a verified principal, not infer trust from a network address or browser tab.",
+    boundary: "Public access to the interface must not imply permission to invoke models, tools, or private data.",
+    verification: "Compare anonymous, valid, expired, and revoked sessions. Verify that protected actions are denied independently of client-side UI state.",
+    steps: ["INTENT", "SESSION", "POLICY"],
+  },
+  spa: {
+    code: "01 / BROWSER",
+    principle: "The React SPA renders untrusted browser-facing state and sends user requests to FastAPI; it does not hold long-lived service credentials.",
+    boundary: "CORS controls which cross-origin responses browser scripts can read. It is not authorization and may not stop side-effecting requests.",
+    verification: "Use controlled origins to check readable responses separately from server-side effects, CSRF defenses, and token handling.",
+    steps: ["ORIGIN", "REQUEST", "RESPONSE"],
+  },
+  api: {
+    code: "02 / INGRESS",
+    principle: "FastAPI is the authenticated ingress: validate inputs, verify identity, enforce per-operation authorization, then dispatch to scoped downstream services.",
+    boundary: "A valid token only establishes identity; every database, object, model, and tool action still needs an explicit policy decision.",
+    verification: "Test denied requests by absent identity, wrong audience, wrong tenant, disallowed action, malformed body, and unexpected Host/Origin.",
+    steps: ["VALIDATE", "AUTHORIZE", "DISPATCH"],
+  },
+  sso: {
+    code: "03 / IDENTITY",
+    principle: "An SSO/OAuth2 provider issues credentials; a browser login typically uses Authorization Code with PKCE, while the API verifies issuer, audience, expiry, and signature or introspection.",
+    boundary: "The API-to-SSO arrow denotes verification, not that FastAPI sends user passwords to the identity provider.",
+    verification: "Reject expired, forged, wrong-audience, and wrong-issuer tokens. Confirm key rotation and revocation behavior.",
+    steps: ["ISSUE", "VERIFY", "EXPIRE"],
+  },
+  postgres: {
+    code: "04 / RELATIONAL",
+    principle: "PostgreSQL stores structured application state under transactional consistency; the API uses narrowly scoped database credentials.",
+    boundary: "Separate application roles and tenants. Parameterized queries and row-level or application-level authorization prevent one principal reading another's rows.",
+    verification: "Exercise cross-tenant reads and writes, unauthorized schema access, rollback behavior, and database audit events.",
+    steps: ["QUERY", "TRANSACTION", "COMMIT"],
+  },
+  s3: {
+    code: "05 / OBJECT",
+    principle: "S3-compatible storage separates large objects and model artifacts from relational metadata; access should be scoped by bucket, key prefix, operation, and lifetime.",
+    boundary: "An object URL is not an authorization policy. Public buckets, broad service keys, or long-lived signed links can expose artifacts.",
+    verification: "Attempt cross-tenant key reads, expired signed URLs, public listing, and unauthorized writes using isolated test identities.",
+    steps: ["KEY", "POLICY", "OBJECT"],
+  },
+  llm: {
+    code: "06 / INFERENCE",
+    principle: "The LLM API transforms authorized prompts into token streams. A generated tool request is untrusted model output until a separate controller validates it.",
+    boundary: "Model weights and inference endpoints do not grant direct access to RAG collections, scheduler credentials, or outbound services.",
+    verification: "Show that model-generated tool suggestions cannot execute without an independent policy check and attributable audit event.",
+    steps: ["PROMPT", "TOKENS", "INTENT"],
+  },
+  rag: {
+    code: "07 / RETRIEVAL",
+    principle: "A retrieval service embeds or indexes permitted documents, filters by identity and collection, then returns context for synthesis with source provenance.",
+    boundary: "Retrieved text is lower-trust data, not instructions. Filtering after retrieval alone may leak cross-tenant content or metadata.",
+    verification: "Test tenant isolation, source citations, poisoned documents, and whether permission filtering happens before context reaches the model.",
+    steps: ["EMBED", "FILTER", "CITE"],
+  },
+  agent: {
+    code: "08 / ORCHESTRATE",
+    principle: "The agent controller receives proposed actions, evaluates policy and approvals, executes an allowed tool, and records the outcome.",
+    boundary: "A tool call cannot inherit unrestricted authority from the model. Each target API receives a purpose-specific identity and argument constraints.",
+    verification: "Test denied tools, unsafe arguments, approval gates, replay, and an audit trail linking each execution to the originating user request.",
+    steps: ["PROPOSE", "APPROVE", "EXECUTE"],
+  },
+  hpc: {
+    code: "09 / SCHEDULER",
+    principle: "The HPC scheduler accepts bounded compute jobs, queues them by policy, and allocates isolated resources under a manager-scoped service identity.",
+    boundary: "Submission rights, resource quotas, dataset mounts, and job cancellation must be checked at the scheduler, not just in the chat UI.",
+    verification: "Attempt unauthorized job submission, quota exhaustion, cross-project data mounts, and cancellation under a lower-privileged identity.",
+    steps: ["SUBMIT", "QUEUE", "ALLOCATE"],
+  },
+  external: {
+    code: "10 / EGRESS",
+    principle: "The agent fetches research literature and database records through a mediated outbound connector with provenance and bounded destinations.",
+    boundary: "User-provided URLs and retrieved pages are untrusted. Destination allowlists and network egress rules limit SSRF and data exfiltration paths.",
+    verification: "Check blocked internal addresses, unapproved hosts, redirects, oversized responses, and source attribution in resulting answers.",
+    steps: ["ALLOW", "FETCH", "ATTRIBUTE"],
+  },
+  notify: {
+    code: "11 / DELIVERY",
+    principle: "A manager-authorized notification service transforms approved events into recipient-bound email or alerts with templates, rate limits, and delivery logs.",
+    boundary: "The model must not choose arbitrary recipients or send raw sensitive content directly. Approval and recipient policy gate each outbound action.",
+    verification: "Try unauthorized recipients, duplicate events, excessive delivery volume, and sensitive payloads; confirm denial and audit records.",
+    steps: ["EVENT", "REVIEW", "DELIVER"],
+  },
+} as const satisfies Record<ServiceId, { code: string; principle: string; boundary: string; verification: string; steps: readonly string[] }>;

@@ -1,69 +1,122 @@
-import Image from "next/image";
+import Link from "next/link";
+import { focusAreas } from "./focus-areas";
+import GlobeScene from "./globe-scene";
+import { workItems } from "./work-items";
 
+const GITHUB_URL = "https://github.com/tianmingliu-pixel";
 export default function Home() {
+  const year = new Date().getFullYear();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      {/* Nav */}
+      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
+        <span className="text-lg font-semibold tracking-tight">首页</span>
+        <nav className="flex gap-6 text-sm text-slate-400">
+          <a href="#focus" className="hover:text-white">Focus</a>
+          <a href="#work" className="hover:text-white">Work</a>
+          <a href="#contact" className="hover:text-white">Contact</a>
+        </nav>
+      </header>
+
+      <main className="mx-auto max-w-5xl px-6">
+        {/* Hero */}
+        <section className="grid items-center gap-2 py-8 sm:py-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:gap-4 lg:py-16">
+          <div className="relative z-10">
+            <p className="mb-4 text-sm font-medium uppercase tracking-widest text-emerald-400">
+              Scientist · Graduate student at CSTU
+            </p>
+            <h1 className="text-3xl font-bold leading-tight sm:text-5xl">
+              Building AI software that is secure by design
+              <span className="mt-2 block text-emerald-300">创建安全的AI Agent软件集.</span>
+            </h1>
+            <p className="mt-5 max-w-xl text-base text-slate-400 sm:text-lg">
+              I work where agentic AI, deep learning, and secure software engineering meet —
+              shipping useful systems without leaving the door open.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-4 sm:mt-8">
+              <a
+                href="#work"
+                className="rounded-lg bg-emerald-500 px-6 py-3 font-semibold text-slate-950 hover:bg-emerald-400"
+              >
+                See my work
+              </a>
+              <a
+                href={GITHUB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-lg border border-slate-700 px-6 py-3 font-semibold hover:border-slate-500"
+              >
+                GitHub
+              </a>
+            </div>
+          </div>
+          <GlobeScene />
+        </section>
+
+        {/* Focus areas */}
+        <section id="focus" className="py-16">
+          <h2 className="mb-8 text-2xl font-bold">What I focus on</h2>
+          <div className="grid gap-6 sm:grid-cols-2">
+            {focusAreas.map((f) => (
+              <Link key={f.slug} href={`/focus/${f.slug}`} className="group rounded-xl border border-slate-800 bg-slate-900 p-6 transition-colors hover:border-emerald-500/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-400">
+                <h3 className="mb-2 font-semibold text-emerald-400">{f.title}</h3>
+                <p className="text-slate-400">{f.body}</p>
+                <span aria-hidden="true" className="mt-5 block text-sm font-medium text-emerald-300 group-hover:text-emerald-200">Explore &rarr;</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Work */}
+        <section id="work" className="py-16">
+          <h2 className="mb-8 text-2xl font-bold">Selected work</h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            {workItems.map((w) => (
+              <Link key={w.slug} href={`/work/${w.slug}`} className="group flex flex-col rounded-xl border border-slate-800 bg-slate-900 p-6 transition-colors hover:border-emerald-500/60 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-400">
+                <span className="mb-3 w-fit rounded-full bg-slate-800 px-3 py-1 text-xs text-slate-300">
+                  {w.tag}
+                </span>
+                <h3 className="mb-2 font-semibold">{w.title}</h3>
+                <p className="text-sm text-slate-400">{w.body}</p>
+                <span aria-hidden="true" className="mt-5 block text-sm font-medium text-emerald-300 group-hover:text-emerald-200">View project &rarr;</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        {/* Writing teaser (blog comes in step 7) */}
+        <section className="py-16">
+          <div className="rounded-xl border border-dashed border-slate-700 p-8 text-center">
+            <h2 className="mb-2 text-2xl font-bold">Writing</h2>
+            <p className="text-slate-400">
+              Notes on security, AI, and learning in public — coming soon.
+            </p>
+          </div>
+        </section>
+
+        {/* Contact */}
+        <section id="contact" className="py-24 text-center">
+          <h2 className="mb-4 text-3xl font-bold">Let&apos;s connect</h2>
+          <p className="mb-8 text-slate-400">
+            Interested in secure AI systems or want to collaborate? Reach out on GitHub.
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
           <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
+            href={GITHUB_URL}
             target="_blank"
             rel="noopener noreferrer"
+            className="rounded-lg bg-emerald-500 px-8 py-3 font-semibold text-slate-950 hover:bg-emerald-400"
           >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
+            Find me on GitHub
           </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
+        </section>
       </main>
+
+      <footer className="border-t border-slate-800 py-8 text-center text-sm text-slate-500">
+        © {year} tianming Liu · Built with Next.js, deployed on Vercel
+      </footer>
     </div>
   );
 }
+
+

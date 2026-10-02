@@ -1,0 +1,102 @@
+.preview {
+  position: fixed;
+  z-index: 40;
+  width: min(620px, calc(100vw - 24px));
+  height: min(526px, calc(100vh - 24px));
+  overflow: hidden;
+  pointer-events: none;
+  border: 1px solid rgba(67, 228, 120, 0.5);
+  border-radius: 6px;
+  background: #03120d;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.78), 0 0 26px rgba(13, 220, 89, 0.16);
+  animation: appear 260ms ease-out both;
+}
+
+.wave {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.rain {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0.42;
+}
+
+.rain span {
+  position: absolute;
+  top: -220px;
+  width: 1ch;
+  overflow-wrap: anywhere;
+  color: #5afa87;
+  font: 15px/16px ui-monospace, monospace;
+  text-shadow: 0 0 8px #2af16c;
+  animation: fall 6s linear infinite;
+}
+
+.content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 11px;
+  padding: 26px 30px 24px;
+  background: linear-gradient(180deg, rgba(1, 12, 8, 0.12), rgba(1, 12, 8, 0.72) 30%, rgba(1, 12, 8, 0.96) 100%);
+}
+
+.label {
+  color: #a2e9b0;
+  font: 11px/1.3 ui-monospace, monospace;
+  letter-spacing: 1px;
+}
+
+.heading,
+.line {
+  margin: 0;
+  color: #d3ffdd;
+  font-family: ui-monospace, monospace;
+  text-shadow: 0 0 10px rgba(61, 255, 114, 0.45);
+  animation: drop 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.heading {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.line {
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@keyframes appear {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes drop {
+  from { opacity: 0; transform: translateY(-42px); filter: blur(4px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes fall {
+  from { transform: translateY(-120px); opacity: 0; }
+  15% { opacity: 1; }
+  80% { opacity: 0.5; }
+  to { transform: translateY(780px); opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .content { gap: 7px; padding: 18px; }
+  .heading { font-size: 13px; }
+  .line { font-size: 11px; line-height: 1.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview, .heading, .line, .rain span { animation: none; }
+  .rain { opacity: 0.14; }
+}

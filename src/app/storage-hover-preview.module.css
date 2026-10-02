@@ -1,0 +1,95 @@
+.preview {
+  position: fixed;
+  z-index: 40;
+  width: min(740px, calc(100vw - 24px));
+  height: min(760px, calc(100vh - 24px));
+  overflow: hidden;
+  pointer-events: none;
+  border: 1px solid #60ddb6;
+  border-radius: 6px;
+  background: #061512;
+  box-shadow: 0 28px 90px #000d, 0 0 35px #37dba433;
+}
+
+.backdrop { object-fit: cover; opacity: 0.13; filter: saturate(0.45); }
+.grid {
+  position: absolute;
+  inset: 0;
+  background-image: linear-gradient(#54d4ae18 1px, transparent 1px), linear-gradient(90deg, #54d4ae18 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: linear-gradient(180deg, #000, transparent 85%);
+}
+
+.content {
+  position: relative;
+  display: flex;
+  height: 100%;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 28px;
+  background: linear-gradient(180deg, #0316117a, #031611de 38%, #031611ef);
+  color: #e6fff6;
+  font-family: ui-monospace, monospace;
+}
+
+.eyebrow, .featuresTitle, .checksum {
+  color: #9df7d2;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  position: relative;
+  opacity: 0;
+  animation: decode 850ms steps(14, end) var(--delay) both;
+}
+
+.entry::after {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: #aaffd0;
+  box-shadow: 0 0 16px #5cffae;
+  content: "";
+  animation: scan 850ms ease-out var(--delay) both;
+}
+
+.address { color: #5bceaa; font-size: 10px; line-height: 1.5; }
+.data p, .data h2 { margin: 0; }
+.data p { font-size: 11px; line-height: 1.45; }
+.data strong { color: #b5ffda; }
+.title h2 { font-size: 19px; line-height: 1.3; }
+.note p { color: #a7daca; font-size: 10px; font-style: italic; }
+.checksum { display: flex; justify-content: space-between; border-top: 1px solid #60ddb657; padding-top: 8px; }
+
+@keyframes decode {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); filter: blur(5px); }
+  70% { opacity: 1; filter: blur(0); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); filter: blur(0); }
+}
+
+@keyframes scan {
+  from { opacity: 0; transform: translateX(0); }
+  20% { opacity: 1; }
+  to { opacity: 0; transform: translateX(665px); }
+}
+
+@media (max-width: 640px) {
+  .content { gap: 8px; padding: 16px 18px; }
+  .entry { grid-template-columns: 19px minmax(0, 1fr); gap: 5px; }
+  .title h2 { font-size: 15px; }
+  .data p { font-size: 9.5px; line-height: 1.32; }
+  .note p { font-size: 9px; }
+  .eyebrow, .featuresTitle, .checksum { font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entry { animation: none; opacity: 1; }
+  .entry::after { display: none; }
+}

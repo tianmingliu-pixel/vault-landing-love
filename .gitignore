@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw TeleGeography inputs (regenerate public/data instead of committing these)
+/cable-geo.json
+/landing-point-geo.json
