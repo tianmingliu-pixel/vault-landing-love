@@ -2,22 +2,35 @@ import Link from "next/link";
 import { focusAreas } from "./focus-areas";
 import GlobeScene from "./globe-scene";
 import { workItems } from "./work-items";
+import LiveSpaceDeck from "./live-space-deck";
+import SiteHeader from "./site-header";
+import { Cover } from "./blog/art";
+import { POSTS } from "./blog/content";
+import TierChip from "./blog/tier-chip";
+
+/** Newest whole-Earth image from NASA's EPIC camera (published a few days after it is taken). */
+async function latestEarth(): Promise<{ src: string; taken: string } | null> {
+  try {
+    const list = await fetch("https://epic.gsfc.nasa.gov/api/natural", { next: { revalidate: 3600 } }).then((r) => r.json() as Promise<{ image: string; date: string }[]>);
+    // The frame closest to local noon over the Americas/Atlantic is usually in the middle of the day's set.
+    const pick = list[Math.floor(list.length / 2)];
+    if (!pick) return null;
+    const [day] = pick.date.split(" ");
+    const [y, m, d] = day.split("-");
+    return { src: `https://epic.gsfc.nasa.gov/archive/natural/${y}/${m}/${d}/jpg/${pick.image}.jpg`, taken: pick.date.replace(" ", "T") };
+  } catch {
+    return null;
+  }
+}
 
 const GITHUB_URL = "https://github.com/tianmingliu-pixel";
-export default function Home() {
+export default async function Home() {
   const year = new Date().getFullYear();
+  const earth = await latestEarth();
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Nav */}
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
-        <span className="text-lg font-semibold tracking-tight">首页</span>
-        <nav className="flex gap-6 text-sm text-slate-400">
-          <a href="#focus" className="hover:text-white">Focus</a>
-          <a href="#work" className="hover:text-white">Work</a>
-          <a href="#contact" className="hover:text-white">Contact</a>
-        </nav>
-      </header>
+      <SiteHeader home />
 
       <main className="mx-auto max-w-5xl px-6">
         {/* Hero */}
@@ -43,7 +56,7 @@ export default function Home() {
               </a>
               <a
                 href={GITHUB_URL}
-                target="_blank"
+               
                 rel="noopener noreferrer"
                 className="rounded-lg border border-slate-700 px-6 py-3 font-semibold hover:border-slate-500"
               >
@@ -53,6 +66,9 @@ export default function Home() {
           </div>
           <GlobeScene />
         </section>
+
+        {/* Live Earth & Space */}
+        <LiveSpaceDeck earth={earth} />
 
         {/* Focus areas */}
         <section id="focus" className="py-16">
@@ -85,13 +101,29 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Writing teaser (blog comes in step 7) */}
-        <section className="py-16">
-          <div className="rounded-xl border border-dashed border-slate-700 p-8 text-center">
-            <h2 className="mb-2 text-2xl font-bold">Writing</h2>
-            <p className="text-slate-400">
-              Notes on security, AI, and learning in public — coming soon.
-            </p>
+        {/* Articles */}
+        <section id="articles" className="py-16">
+          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-bold">Articles</h2>
+              <p className="mt-2 max-w-2xl text-slate-400">One deep dive per focus area plus field notes from the space lab — free overviews, walkthroughs for Google sign-in members, and labs and kits on the Platinum, Diamond and Supreme plans.</p>
+            </div>
+            <Link href="/pricing" className="rounded-lg border border-fuchsia-500/50 px-4 py-2 text-sm font-semibold text-fuchsia-200 hover:bg-fuchsia-500/10">See plans &rarr;</Link>
+          </div>
+          <div className="grid gap-6 md:grid-cols-6">
+            {POSTS.map((post, k) => (
+              <Link key={post.slug} href={`/blog/${post.slug}`} className={`group overflow-hidden rounded-xl border border-slate-800 bg-slate-900 transition-colors hover:border-emerald-500/60 ${k < 2 ? "md:col-span-3" : "md:col-span-2"}`}>
+                <div className="relative">
+                  <Cover motif={post.motif} accent={post.accent} className="h-36 w-full transition duration-500 group-hover:scale-[1.03]" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent" />
+                </div>
+                <div className="p-5">
+                  <p className="font-mono text-[10px] uppercase tracking-widest" style={{ color: post.accent }}>{post.minutes} min · {post.kit.name}</p>
+                  <h3 className="mt-1 font-semibold">{post.title}</h3>
+                  <div className="mt-3 flex gap-1.5">{post.sections.map((sec) => <TierChip key={sec.id} tier={sec.access} />)}</div>
+                </div>
+              </Link>
+            ))}
           </div>
         </section>
 
@@ -103,7 +135,7 @@ export default function Home() {
           </p>
           <a
             href={GITHUB_URL}
-            target="_blank"
+           
             rel="noopener noreferrer"
             className="rounded-lg bg-emerald-500 px-8 py-3 font-semibold text-slate-950 hover:bg-emerald-400"
           >

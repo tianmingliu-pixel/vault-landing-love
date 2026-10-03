@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Link from "next/link";
+import BackLink from "./back-link";
 import { ArrowRight, Bell, BookOpen, Boxes, Cpu, Database, FileBox, Globe2, HardDrive, Network, Server, ShieldCheck, X, type LucideIcon } from "lucide-react";
 import LlmRackScene, { type SecurityMode } from "./llm-rack-scene";
 import LlmNodeKnowledge, { NodeDiagram } from "./llm-node-knowledge";
@@ -49,7 +50,7 @@ export default function LlmResearch() {
     <main className="min-h-screen bg-[#101816] text-[#eff4ed]">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-6">
         <Link href="/" className="text-lg font-semibold hover:text-emerald-300">首页</Link>
-        <Link href="/#work" className="text-sm text-[#a6bdb2] hover:text-white">All work &larr;</Link>
+        <BackLink fallback="/#work" />
       </header>
 
       <section className="mx-auto max-w-6xl px-6 pb-16 pt-14 sm:pt-20">
@@ -197,7 +198,7 @@ export default function LlmResearch() {
       <footer className="mx-auto max-w-6xl px-6 py-12">
         <p className="font-mono text-xs uppercase tracking-widest text-[#8fe3bc]">Technical references</p>
         <div className="mt-4 flex flex-wrap gap-x-8 gap-y-3">
-          {reading.map((source) => <a key={source.href} href={source.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-[#c8dbcc] underline decoration-[#5b896e] underline-offset-4 hover:text-white">{source.label} <ArrowRight size={14} aria-hidden="true" /></a>)}
+          {reading.map((source) => <a key={source.href} href={source.href} rel="noopener noreferrer" className="inline-flex items-center gap-1 text-sm text-[#c8dbcc] underline decoration-[#5b896e] underline-offset-4 hover:text-white">{source.label} <ArrowRight size={14} aria-hidden="true" /></a>)}
         </div>
         <p className="mt-9 text-xs text-[#96ab99]">Case study status: documented finding and proposed reference design. Measurements and production controls not claimed.</p>
       </footer>

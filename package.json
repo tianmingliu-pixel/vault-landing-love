@@ -9,12 +9,17 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^7.9.10",
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "lucide-react": "^1.48.0",
     "maplibre-gl": "^5.24.0",
     "next": "16.3.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "satellite.js": "^7.1.0",
+    "sharp": "^0.35.5",
+    "stripe": "^23.0.0",
     "three": "^0.186.1"
   },
   "devDependencies": {

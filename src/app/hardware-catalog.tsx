@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Hand, RotateCcw, X, ZoomIn, ZoomOut } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import BackLink from "./back-link";
 import CpuHoverPreview from "./cpu-hover-preview";
 import GpuHoverPreview from "./gpu-hover-preview";
 import MotherboardHoverPreview from "./motherboard-hover-preview";
@@ -90,7 +91,7 @@ export default function HardwareCatalog() {
     <div className="min-h-screen bg-[#0b1519] text-slate-100">
       <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-6 py-6">
         <Link href="/" className="text-lg font-semibold hover:text-emerald-300">首页</Link>
-        <Link href="/#work" className="text-sm text-slate-400 hover:text-white">All work &larr;</Link>
+        <BackLink fallback="/#work" />
       </header>
 
       <main className="mx-auto max-w-6xl px-6 pb-24">
@@ -252,7 +253,7 @@ export default function HardwareCatalog() {
             <div className="px-5 py-6 sm:px-8">
               <h2 id="hardware-dialog-title" className="text-2xl font-semibold">{selected.name}</h2>
               <p className="mt-3 leading-relaxed text-slate-300">{selected.description}</p>
-              <a href={selected.source} target="_blank" rel="noopener noreferrer" className="mt-6 inline-block text-sm text-emerald-300 underline underline-offset-4 hover:text-emerald-200">产品与图片来源 &rarr;</a>
+              <a href={selected.source} rel="noopener noreferrer" className="mt-6 inline-block text-sm text-emerald-300 underline underline-offset-4 hover:text-emerald-200">产品与图片来源 &rarr;</a>
             </div>
           </div>
         )}

@@ -373,6 +373,11 @@ export function IssPlayer({ streamId, title }: { streamId: string; title: string
   }, [streamId]);
 
   const params = "autoplay=1&mute=1&controls=0&disablekb=1&modestbranding=1&rel=0&iv_load_policy=3&cc_load_policy=0&playsinline=1&enablejsapi=1&vq=hd1080";
+  // Load the player with location.replace (not a src attribute) so it never adds entries to the browser history:
+  // the Back button then always returns to the previous page instead of stepping through the video frame.
+  useEffect(() => {
+    frameRef.current?.contentWindow?.location.replace(`${origin}/embed/${streamId}?${params}`);
+  }, [streamId]);
   const behind = info.duration ? Math.max(0, info.duration - info.current - (liveGap ?? 0)) : 0;
   const fmt = (seconds: number) => `${Math.floor(seconds / 3600)}:${String(Math.floor((seconds % 3600) / 60)).padStart(2, "0")}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 
@@ -381,7 +386,6 @@ export function IssPlayer({ streamId, title }: { streamId: string; title: string
       <iframe
         ref={frameRef}
         title={title}
-        src={`${origin}/embed/${streamId}?${params}`}
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         className="pointer-events-none h-[calc(100%+120px)] w-full -translate-y-[60px]"
       />
@@ -507,7 +511,7 @@ export function OrbitTV() {
                 {s.label}
               </button>
             ))}
-            <a href="https://www.youtube.com/@NASA/streams" target="_blank" rel="noreferrer" className="ml-auto text-[10px] text-emerald-300 hover:underline">All NASA streams</a>
+            <a href="https://www.youtube.com/@NASA/streams" rel="noreferrer" className="ml-auto text-[10px] text-emerald-300 hover:underline">All NASA streams</a>
           </div>
           <p className="mt-2 text-[11px] text-slate-500">NASA&apos;s official stream from the ISS. It pauses during loss of signal and crew activities; the Earth channel does not.</p>
         </>

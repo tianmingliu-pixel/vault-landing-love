@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Container builds (Cloud Run, see Dockerfile) set BUILD_STANDALONE=1 to get a self-contained server in .next/standalone.
+  output: process.env.BUILD_STANDALONE === "1" ? "standalone" : undefined,
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "thumb.wikimedia.org" },

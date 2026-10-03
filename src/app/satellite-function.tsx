@@ -157,7 +157,7 @@ export default function SatelliteFunction({
           </div>
           <p className="mt-1 text-[11px] text-slate-500">
             NASA&apos;s official stream; when the crew feed is off, NASA shows a placeholder.{" "}
-            <a href="https://www.youtube.com/@NASA/streams" target="_blank" rel="noreferrer" className="text-emerald-300 hover:underline">Open on YouTube</a>
+            <a href="https://www.youtube.com/@NASA/streams" rel="noreferrer" className="text-emerald-300 hover:underline">Open on YouTube</a>
           </p>
         </section>
       )}
@@ -254,9 +254,9 @@ export default function SatelliteFunction({
           <p className="mt-1 text-[11px] text-slate-500">
             Waterfall (frequency vs time) recorded by station {satnogs.obs[0].station_name} on {satnogs.obs[0].start.slice(0, 16).replace("T", " ")} UTC.{" "}
             {satnogs.obs[0].payload && (
-              <a href={satnogs.obs[0].payload} target="_blank" rel="noreferrer" className="text-emerald-300 hover:underline">Listen to the recording</a>
+              <a href={satnogs.obs[0].payload} rel="noreferrer" className="text-emerald-300 hover:underline">Listen to the recording</a>
             )}{" "}
-            · <a href={`https://network.satnogs.org/observations/${satnogs.obs[0].id}/`} target="_blank" rel="noreferrer" className="text-emerald-300 hover:underline">Observation #{satnogs.obs[0].id}</a>
+            · <a href={`https://network.satnogs.org/observations/${satnogs.obs[0].id}/`} rel="noreferrer" className="text-emerald-300 hover:underline">Observation #{satnogs.obs[0].id}</a>
           </p>
         </section>
       )}
@@ -267,7 +267,7 @@ export default function SatelliteFunction({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`https://db-satnogs.freetls.fastly.net/media/${satnogs.sat.image}`} alt={`${satnogs.sat.name}`} className="mt-2 max-h-56 w-full rounded-md border border-slate-800 bg-white object-contain" />
           <p className="mt-1 text-[11px] text-slate-500">
-            From the SatNOGS DB entry{satnogs.sat.website ? <> · <a href={satnogs.sat.website} target="_blank" rel="noreferrer" className="text-emerald-300 hover:underline">mission website</a></> : null}.
+            From the SatNOGS DB entry{satnogs.sat.website ? <> · <a href={satnogs.sat.website} rel="noreferrer" className="text-emerald-300 hover:underline">mission website</a></> : null}.
           </p>
         </section>
       )}

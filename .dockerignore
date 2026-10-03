@@ -1,0 +1,10 @@
+node_modules
+.next
+.git
+.vercel
+.env.local
+.env.development*
+*.tsbuildinfo
+cable-geo.json
+landing-point-geo.json
+scripts/data

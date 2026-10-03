@@ -312,7 +312,7 @@ export default function GroundLinks({ marker, receptions, frequency, name, clock
           {receptions.length === 0 && <li className="text-slate-500">None published recently.</li>}
           {receptions.map((r) => (
             <li key={r.id} className="truncate">
-              <a href={`https://network.satnogs.org/observations/${r.id}/`} target="_blank" rel="noreferrer" className="hover:text-emerald-300">
+              <a href={`https://network.satnogs.org/observations/${r.id}/`} rel="noreferrer" className="hover:text-emerald-300">
                 {r.station_name || "Unnamed station"}
               </a>
               <span className="text-slate-500"> · {r.start.slice(5, 16).replace("T", " ")} UTC</span>

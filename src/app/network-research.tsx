@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, useSyncExternalStore, type CSSProperties } from "react";
 import Link from "next/link";
+import BackLink from "./back-link";
 import { NetworkNodeVisual } from "./network-visual";
 import { netKnowledge } from "./network-knowledge";
 import { allNetNodes, layout, mediumColors, netEdges, sectors, type NetEdgeId, type NetNodeId } from "./network-topology";
@@ -12,6 +13,24 @@ import CityNetwork from "./city-network";
 import dynamic from "next/dynamic";
 
 const SatelliteLayer = dynamic(() => import("./satellite-layer"), { ssr: false });
+const SunPanel = dynamic(() => import("./sun-panel"), { ssr: false });
+const SolarSystem = dynamic(() => import("./solar-system"), { ssr: false });
+
+/** Wide screens have room beside the 1152 px column: the Sun goes on the left, the solar system on the right. */
+const FLANK_QUERY = "(min-width: 1840px)";
+// Each side column takes all the room beside the page column (minus the 1.5 rem gap and a 1 rem edge), up to 620 px.
+const FLANK_WIDTH: CSSProperties = { width: "min(620px, calc((100vw - 1152px) / 2 - 40px))" };
+function useFlanks() {
+  return useSyncExternalStore(
+    (onChange) => {
+      const media = window.matchMedia(FLANK_QUERY);
+      media.addEventListener("change", onChange);
+      return () => media.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia(FLANK_QUERY).matches,
+    () => false,
+  );
+}
 
 /* ---------- local topology: from a home router to the global core ---------- */
 
@@ -108,6 +127,7 @@ export default function NetworkResearch() {
   const [country, setCountry] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const { data, borders, failed } = useCableData();
+  const flanks = useFlanks();
   const { data: land, failed: landFailed } = useLandData();
   const [landView, setLandView] = useState<"3d" | "2d">("3d");
   const [landScope, setLandScope] = useState<LinkScope>("regional");
@@ -169,7 +189,7 @@ export default function NetworkResearch() {
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
         <Link href="/" className="text-lg font-semibold tracking-tight hover:text-emerald-300">首页</Link>
-        <Link href="/#work" className="text-sm text-slate-400 hover:text-white">All work &larr;</Link>
+        <BackLink fallback="/#work" />
       </header>
 
       <main className="mx-auto max-w-6xl px-6 pb-24">
@@ -642,7 +662,17 @@ export default function NetworkResearch() {
         </section>
 
         {/* Layer 2c: communication satellites — live positions from public orbital elements */}
-        <section aria-labelledby="orbit-title" className="border-t border-slate-800 py-14">
+        <section aria-labelledby="orbit-title" className="relative border-t border-slate-800 py-14">
+          {flanks && (
+            <>
+              <div className="absolute bottom-14 right-full top-14 mr-6" style={FLANK_WIDTH}>
+                <div className="sticky top-6"><SunPanel /></div>
+              </div>
+              <div className="absolute bottom-14 left-full top-14 ml-6" style={FLANK_WIDTH}>
+                <div className="sticky top-6"><SolarSystem /></div>
+              </div>
+            </>
+          )}
           <p className="font-mono text-xs uppercase tracking-widest text-emerald-300">Layer 2 / in orbit</p>
           <h2 id="orbit-title" className="mt-3 text-2xl font-semibold sm:text-3xl">The network above: satellites and what they do</h2>
           <p className="mt-2 mb-6 max-w-3xl text-sm text-slate-400">
@@ -650,6 +680,12 @@ export default function NetworkResearch() {
             Select one to see what it is, who runs it, which countries and cities sit inside its coverage, and what it openly publishes.
           </p>
           <SatelliteLayer borders={borders} countryName={countryName} />
+          {!flanks && (
+            <div className="mt-10 grid gap-6 md:grid-cols-2">
+              <SunPanel />
+              <SolarSystem />
+            </div>
+          )}
         </section>
 
         {/* Layer 3: engineering principles */}
