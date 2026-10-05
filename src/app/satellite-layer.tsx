@@ -271,6 +271,7 @@ function SatelliteGlobe({
   const apiRef = useRef<{ zoom: (f: number) => void; reset: () => void } | null>(null);
   const stateRef = useRef({ enabled, selected, speed, onSelect, focus });
   const reduced = useReducedMotion();
+  const [glEpoch, setGlEpoch] = useState(0);
 
   useEffect(() => {
     stateRef.current = { enabled, selected, speed: reduced ? 0 : speed, onSelect, focus };
@@ -288,6 +289,12 @@ function SatelliteGlobe({
     const camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
     camera.position.copy(toVector(10, 25, 7.5));
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    // If the browser drops this GL context anyway (too many 3D views, GPU reset), rebuild the scene instead of leaving it blank.
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      window.setTimeout(() => setGlEpoch((n) => n + 1), 250);
+    };
+    renderer.domElement.addEventListener("webglcontextlost", onContextLost);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.setClearColor(0x000000, 0);
     renderer.domElement.style.width = "100%";
@@ -514,10 +521,13 @@ function SatelliteGlobe({
       apiRef.current = null;
       disposables.forEach((item) => item.dispose());
       if (model) disposeModel(model);
+      renderer.domElement.removeEventListener("webglcontextlost", onContextLost);
       renderer.dispose();
+      // Release the GL context now: browsers allow only ~16 at once and evict the oldest (the big scenes) when it runs out.
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, [data, borders, familyOf]);
+  }, [data, borders, familyOf, glEpoch]);
 
   return (
     <div

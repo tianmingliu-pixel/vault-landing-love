@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { ZoomControls, useFullscreen } from "./network-globe";
@@ -149,7 +150,15 @@ const SPEEDS = [
   { label: "1 day/s", daysPerSecond: 1 },
   { label: "10 days/s", daysPerSecond: 10 },
   { label: "30 days/s", daysPerSecond: 30 },
+  // The outer planets take 12–248 years per lap: these speeds let Jupiter → Pluto be seen moving round the Sun.
+  { label: "1 yr/s", daysPerSecond: 365.25 },
+  { label: "10 yr/s", daysPerSecond: 3652.5 },
 ];
+
+/** Sidereal orbital periods in days (NASA planetary fact sheets), for the "one lap takes" readout. */
+const ORBIT_DAYS: Record<string, number> = {
+  Mercury: 87.97, Venus: 224.7, Earth: 365.256, Mars: 686.98, Jupiter: 4332.6, Saturn: 10759, Uranus: 30685, Neptune: 60190, Pluto: 90560,
+};
 
 /** Sidereal rotation period (hours; negative = retrograde) and axial tilt (degrees), NASA planetary fact sheets. */
 const SPIN: Record<string, { hours: number; tilt: number }> = {
@@ -232,6 +241,13 @@ const orbitRadius = (r: number, altKm: number, bodyKm: number) => r * (1.25 + 0.
 
 /** Turning faster than once every 2 s turns into flicker on screen, so fast spins and orbits are shown at that cap. */
 const CAP_RAD_PER_S = Math.PI;
+/** Planet spins share one display factor so their ratios stay true: at speeds where Jupiter (the fastest, 9.925 h) would
+    exceed the flicker cap, every planet is slowed by the same factor instead of each being clipped to the cap separately. */
+const FASTEST_SPIN_RAD_PER_DAY = ((Math.PI * 2) / 9.925) * 24;
+const spinFactor = (daysPerSecond: number) => Math.min(1, CAP_RAD_PER_S / (FASTEST_SPIN_RAD_PER_DAY * daysPerSecond));
+/** Real seconds as a short span: "40 s", "12 min", "3.2 h", "5.1 d", "2.3 yr". */
+const formatSpan = (sec: number) =>
+  sec < 120 ? `${sec.toFixed(0)} s` : sec < 7200 ? `${(sec / 60).toFixed(0)} min` : sec < 172800 ? `${(sec / 3600).toFixed(1)} h` : sec < 3.15e7 * 2 ? `${(sec / 86400).toFixed(1)} d` : `${(sec / 3.156e7).toFixed(1)} yr`;
 
 /** A banded surface with a bright meridian stripe, so a planet's spin can be seen. */
 function spinTexture(color: number) {
@@ -305,6 +321,7 @@ export default function SolarSystem({ compact = false }: { compact?: boolean } =
   const hostRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef<Record<string, HTMLSpanElement | null>>({});
   const [speed, setSpeed] = useState(3);
+  const [glEpoch, setGlEpoch] = useState(0);
   const speedRef = useRef(SPEEDS[3].daysPerSecond);
   const [dateLabel, setDateLabel] = useState("");
   const { missions, links } = useDeepSpace();
@@ -360,6 +377,12 @@ export default function SolarSystem({ compact = false }: { compact?: boolean } =
     const camera = new THREE.PerspectiveCamera(42, 1, 0.01, 200);
     camera.position.set(0, 9, 12);
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+    // If the browser drops this GL context anyway (too many 3D views, GPU reset), rebuild the scene instead of leaving it blank.
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      window.setTimeout(() => setGlEpoch((n) => n + 1), 250);
+    };
+    renderer.domElement.addEventListener("webglcontextlost", onContextLost);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
@@ -498,7 +521,7 @@ export default function SolarSystem({ compact = false }: { compact?: boolean } =
       scene.add(new THREE.Line(trailGeometry, own(new THREE.LineBasicMaterial({ vertexColors: true, blending: THREE.AdditiveBlending, transparent: true }))));
       spinner.rotation.y = ((((jd - 2451545) * 24) / spin.hours) % 1) * Math.PI * 2;
       moons.forEach((moon) => (moon.phase += ((jd - 2451545) / moon.spec.days) * Math.PI * 2 * (moon.spec.retro ? -1 : 1)));
-      return { planet, mesh: holder, tilt, spinner, moons, spin, trailPositions, trailGeometry, trailDays: Math.min(periodDays * 0.15, 3000) };
+      return { planet, mesh: holder, tilt, spinner, moons, spin, trailPositions, trailGeometry, trailDays: periodDays * 0.15 };
     });
 
     // The Moon, drawn just beside Earth in its true direction (its real distance is invisible at this scale), on its orbit.
@@ -712,7 +735,7 @@ export default function SolarSystem({ compact = false }: { compact?: boolean } =
       bodies.forEach(({ planet, mesh, spinner, moons, spin, trailPositions, trailGeometry, trailDays }) => {
         mesh.position.copy(toScene(planetAt(planet, jd)));
         placeLabel(planet.name, mesh.position);
-        spinner.rotation.y += advance(((Math.PI * 2) / spin.hours) * 24, dtDays, dtSec);
+        spinner.rotation.y += ((Math.PI * 2) / spin.hours) * 24 * dtDays * spinFactor(speedRef.current);
         for (let k = 0; k < 48; k++) {
           trailPoint.copy(toScene(planetAt(planet, jd - trailDays * (1 - k / 47))));
           trailPositions.set([trailPoint.x, trailPoint.y, trailPoint.z], k * 3);
@@ -841,10 +864,13 @@ export default function SolarSystem({ compact = false }: { compact?: boolean } =
       owned.forEach((item) => item.dispose());
       sunTexture?.dispose();
       setSunTextureRef.current = () => undefined;
+      renderer.domElement.removeEventListener("webglcontextlost", onContextLost);
       renderer.dispose();
+      // Release the GL context now: browsers allow only ~16 at once and evict the oldest (the big scenes) when it runs out.
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
-  }, [missions]);
+  }, [missions, glEpoch]);
 
   const missionName = (key: string) => missions.find((m) => m.key === key)?.name ?? key;
 
@@ -882,15 +908,35 @@ export default function SolarSystem({ compact = false }: { compact?: boolean } =
         </span>
       </div>
       <div className="mt-2 flex items-center justify-between gap-2">
-        <div className="inline-flex border border-slate-700 p-0.5" aria-label="Time speed">
+        <div className="inline-flex flex-wrap border border-slate-700 p-0.5" aria-label="Time speed">
           {SPEEDS.map((s, i) => (
             <button key={s.label} type="button" aria-pressed={speed === i} onClick={() => setSpeed(i)} className={`px-1.5 py-0.5 font-mono text-[9px] ${speed === i ? "bg-sky-300 text-slate-950" : "text-slate-300 hover:text-white"}`}>
               {s.label}
             </button>
           ))}
         </div>
-        <span className="text-[9px] text-slate-500">√ distance scale · rings 1 / 10 / 100 au</span>
+        <span className="text-right text-[9px] text-slate-500">
+          {spinFactor(SPEEDS[speed].daysPerSecond) < 1 ? (
+            <span className="text-amber-200/80">spins shown at 1/{Math.round(1 / spinFactor(SPEEDS[speed].daysPerSecond))} speed (ratios true) · </span>
+          ) : (
+            <span className="text-emerald-300/80">spins at true rate · </span>
+          )}
+          √ distance scale · rings 1 / 10 / 100 au
+        </span>
       </div>
+      <p className="mt-1 font-mono text-[9px] leading-relaxed text-slate-500" aria-label="Each planet's own rotation at this speed">
+        {Object.entries(SPIN).map(([name, spin]) => {
+          const turnsPerSec = (24 / Math.abs(spin.hours)) * SPEEDS[speed].daysPerSecond;
+          const day = Math.abs(spin.hours) >= 48 ? `${(Math.abs(spin.hours) / 24).toFixed(1)} d` : `${Math.abs(spin.hours).toFixed(1)} h`;
+          const rate = turnsPerSec >= 0.1 ? `${turnsPerSec.toFixed(turnsPerSec >= 10 ? 0 : 1)} turns/s` : `1 turn / ${formatSpan(1 / turnsPerSec)}`;
+          return (
+            <span key={name} className="mr-2 inline-block">
+              <span className="text-slate-300">{name}</span> {day}
+              {spin.hours < 0 ? " ↺" : ""} · {rate} · lap {formatSpan(ORBIT_DAYS[name] / SPEEDS[speed].daysPerSecond)}
+            </span>
+          );
+        })}
+      </p>
 
       <div className="mt-2 flex flex-wrap items-center gap-1" aria-label="Open a body's intel">
         <span className="mr-1 font-mono text-[9px] uppercase tracking-widest text-slate-500">Click a body or</span>
@@ -916,7 +962,7 @@ export default function SolarSystem({ compact = false }: { compact?: boolean } =
       {selected && !compact && <BodyIntel key={selected} body={selected} links={links} distanceAu={distanceFromEarth(selected)} onClose={() => setSelected(null)} />}
 
       {compact ? (
-        <a href="/work/network-concept#orbit-title" className="mt-3 block text-right text-xs font-medium text-sky-300 hover:text-sky-200">Open each body&apos;s intel, the DSN and our path through the galaxy &rarr;</a>
+        <Link href="/work/network-concept#orbit-title" className="mt-3 block text-right text-xs font-medium text-sky-300 hover:text-sky-200">Open each body&apos;s intel, the DSN and our path through the galaxy &rarr;</Link>
       ) : (
         <>
       <p className="mt-4 font-mono text-[10px] uppercase tracking-widest text-emerald-300">Deep Space Network · now</p>

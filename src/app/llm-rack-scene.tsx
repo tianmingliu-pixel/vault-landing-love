@@ -234,6 +234,8 @@ export default function LlmRackScene({ mode, focus, connectionId, accessFilter, 
       geometries.forEach((geometry) => geometry.dispose());
       materials.forEach((material) => material.dispose());
       renderer.dispose();
+      // Release the GL context now: browsers allow only ~16 at once and evict the oldest (the big scenes) when it runs out.
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
   }, []);

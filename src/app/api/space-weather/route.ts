@@ -1,6 +1,8 @@
 // Read-only proxy for NOAA Space Weather Prediction Center products (some send no CORS headers, some are plain text).
 // Only these fixed public endpoints are reachable; responses are cached for five minutes and trimmed to what the
 // Sun panel draws: up to 30 days of history for every series NOAA publishes that far back.
+import { unstable_cache } from "next/cache";
+
 export const revalidate = 300;
 
 const SWPC = "https://services.swpc.noaa.gov/";
@@ -102,15 +104,28 @@ function trim(kind: Kind, body: unknown): unknown {
   }
 }
 
+class UpstreamError extends Error {}
+
+/** Fetches and trims one product. The raw NOAA files can be several MB (GOES X-rays ≈ 6 MB), over the 2 MB limit of
+    Next's fetch cache, so the raw download is never cached; the small trimmed result is cached for five minutes instead. */
+const load = unstable_cache(
+  async (kind: Kind) => {
+    const upstream = await fetch(SWPC + PRODUCTS[kind], { cache: "no-store" });
+    if (!upstream.ok) throw new UpstreamError(`upstream ${upstream.status}`);
+    const raw = PRODUCTS[kind].endsWith(".txt") ? await upstream.text() : await upstream.json();
+    return trim(kind, raw);
+  },
+  ["space-weather"],
+  { revalidate: 300 },
+);
+
 export async function GET(request: Request) {
   const kind = new URL(request.url).searchParams.get("kind") as Kind | null;
   if (!kind || !(kind in PRODUCTS)) return Response.json({ error: "bad request" }, { status: 400 });
   try {
-    const upstream = await fetch(SWPC + PRODUCTS[kind], { next: { revalidate: 300 } });
-    if (!upstream.ok) return Response.json({ error: `upstream ${upstream.status}` }, { status: 502 });
-    const raw = PRODUCTS[kind].endsWith(".txt") ? await upstream.text() : await upstream.json();
-    return Response.json(trim(kind, raw), { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } });
-  } catch {
-    return Response.json({ error: "upstream unreachable" }, { status: 502 });
+    return Response.json(await load(kind), { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=3600" } });
+  } catch (error) {
+    const message = error instanceof UpstreamError ? error.message : "upstream unreachable";
+    return Response.json({ error: message }, { status: 502 });
   }
 }

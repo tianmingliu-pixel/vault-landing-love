@@ -15,6 +15,7 @@ export default function VideoEmbed({ id, title, by, note, accent }: { id: string
             title={title}
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
             className="absolute inset-0 h-full w-full"
           />
         ) : (

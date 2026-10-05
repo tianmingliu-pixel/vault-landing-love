@@ -219,6 +219,8 @@ function GlobeFrame({ disk, url, satellite }: { disk: Disk; url: string | null; 
         (mesh.material as THREE.Material).dispose();
       });
       renderer.dispose();
+      // Release the GL context now: browsers allow only ~16 at once and evict the oldest (the big scenes) when it runs out.
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
   }, [disk, modelKey]);
@@ -373,19 +375,26 @@ export function IssPlayer({ streamId, title }: { streamId: string; title: string
   }, [streamId]);
 
   const params = "autoplay=1&mute=1&controls=0&disablekb=1&modestbranding=1&rel=0&iv_load_policy=3&cc_load_policy=0&playsinline=1&enablejsapi=1&vq=hd1080";
-  // Load the player with location.replace (not a src attribute) so it never adds entries to the browser history:
-  // the Back button then always returns to the previous page instead of stepping through the video frame.
+  // YouTube refuses to play embeds that arrive without a Referer (player error 153), so the frame loads through its own
+  // src with a referrer policy. A frame's first load replaces its blank page rather than adding a history entry, and the
+  // key below gives each stream a fresh frame, so the Back button still returns to the previous page.
+  const [pageOrigin, setPageOrigin] = useState("");
   useEffect(() => {
-    frameRef.current?.contentWindow?.location.replace(`${origin}/embed/${streamId}?${params}`);
-  }, [streamId]);
+    const id = window.setTimeout(() => setPageOrigin(window.location.origin), 0);
+    return () => window.clearTimeout(id);
+  }, []);
+  const src = pageOrigin ? `${origin}/embed/${streamId}?${params}&origin=${encodeURIComponent(pageOrigin)}&widget_referrer=${encodeURIComponent(pageOrigin)}` : undefined;
   const behind = info.duration ? Math.max(0, info.duration - info.current - (liveGap ?? 0)) : 0;
   const fmt = (seconds: number) => `${Math.floor(seconds / 3600)}:${String(Math.floor((seconds % 3600) / 60)).padStart(2, "0")}:${String(Math.floor(seconds % 60)).padStart(2, "0")}`;
 
   return (
     <div ref={boxRef} className="group relative aspect-video overflow-hidden rounded-md border border-slate-800 bg-black">
       <iframe
+        key={src ? streamId : "blank"}
         ref={frameRef}
         title={title}
+        src={src}
+        referrerPolicy="strict-origin-when-cross-origin"
         allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
         className="pointer-events-none h-[calc(100%+120px)] w-full -translate-y-[60px]"
       />

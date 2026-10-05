@@ -176,6 +176,8 @@ export default function GlobeScene() {
       orbitGeometry.dispose();
       orbitMaterial.dispose();
       renderer.dispose();
+      // Release the GL context now: browsers allow only ~16 at once and evict the oldest (the big scenes) when it runs out.
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
   }, []);

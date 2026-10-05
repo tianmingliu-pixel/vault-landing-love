@@ -273,6 +273,8 @@ export default function GroundLinks({ marker, receptions, frequency, name, clock
       disposeModel(craft);
       owned.forEach((item) => item.dispose());
       renderer.dispose();
+      // Release the GL context now: browsers allow only ~16 at once and evict the oldest (the big scenes) when it runs out.
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
     // receptionKey stands in for `receptions` (new array each render).

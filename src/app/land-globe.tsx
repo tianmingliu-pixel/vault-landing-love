@@ -274,6 +274,8 @@ export function LandGlobe3D({ data, scope, selected, onSelect }: ViewProps) {
       apiRef.current = null;
       disposables.forEach((item) => item.dispose());
       renderer.dispose();
+      // Release the GL context now: browsers allow only ~16 at once and evict the oldest (the big scenes) when it runs out.
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     };
   }, [data, scope]);
