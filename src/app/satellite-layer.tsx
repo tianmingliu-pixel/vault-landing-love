@@ -5,6 +5,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import * as satellite from "satellite.js";
 import { OrbitTV } from "./orbit-timelapse";
+import EarthBackupTV from "./earth-backup-tv";
 import { createSimClock, type SimClock } from "./sim-clock";
 import { addModelLights, buildSatelliteModel, disposeModel, poseModel, type SatMarker } from "./satellite-model";
 import SatelliteFunction, { COMM_KINDS, hasEarthImagery, type FunctionKind } from "./satellite-function";
@@ -870,7 +871,10 @@ export default function SatelliteLayer({ borders, countryName }: { borders: numb
             </div>
           )}
         </aside>
-        <OrbitTV />
+        <div className="flex flex-col gap-4">
+          <OrbitTV />
+          <EarthBackupTV />
+        </div>
         </div>
 
         {/* What the selected satellite openly publishes: fills the space under the list and the globe. */}

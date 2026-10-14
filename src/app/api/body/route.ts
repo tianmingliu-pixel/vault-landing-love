@@ -6,7 +6,7 @@
 //   archive — the newest NASA Image and Video Library images and videos about the body
 // All sources are public, read-only and cached server-side.
 
-type Item = { t: string; received?: string; src: string; full?: string; title: string; by: string };
+type Item = { t: string; received?: string; src: string; full?: string; title: string; by: string; group?: string };
 type Video = { t: string; title: string; thumb: string; mp4: string; page: string };
 
 const BODIES: Record<string, { query: string[]; match: RegExp }> = {
@@ -23,31 +23,55 @@ const BODIES: Record<string, { query: string[]; match: RegExp }> = {
   Pluto: { query: ["Pluto", "New Horizons"], match: /\b(Pluto|New Horizons|Charon|Arrokoth)\b/ },
 };
 
+// Every upstream gets 8 s: one slow agency server must not stall (or time out) the whole intel panel.
 const json = <T,>(url: string, revalidate: number) =>
-  fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (open-data research page)" }, next: { revalidate } }).then((r) => {
+  fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (open-data research page)" }, next: { revalidate }, signal: AbortSignal.timeout(8000) }).then((r) => {
     if (!r.ok) throw new Error(`${r.status} ${url}`);
     return r.json() as Promise<T>;
   });
 const https = (url: string) => url.replace(/^http:\/\//, "https://");
-const settle = async <T,>(promise: Promise<T>): Promise<T | null> => promise.catch(() => null);
+const settle = async <T,>(promise: Promise<T>): Promise<T | null> =>
+  promise.catch((error) => {
+    console.warn("body intel source failed:", error instanceof Error ? error.message : error);
+    return null;
+  });
 
 /* ---------- Mars: Perseverance and Curiosity raw images, Curiosity weather ---------- */
 
 type M2020Image = { sol: number; imageid: string; camera: { instrument: string }; title: string; date_taken_utc: string; date_received: string; sample_type: string; image_files: { medium?: string; small?: string; large?: string; full_res?: string } };
 type MslImage = { sol: number; instrument: string; title: string; date_taken: string; date_received: string; https_url: string; is_thumbnail: boolean; extended?: { sample_type?: string } };
 
-/** Newest sol and the sol before it, a spread of cameras from each. */
-function bySol<T extends { sol: number }>(items: T[], camera: (item: T) => string, take = 8) {
+/** Rover cameras sorted into what they look at, in display order. Every camera is shown; this only arranges them. */
+const CAMERA_GROUPS: { id: string; match: RegExp }[] = [
+  { id: "Landscape · Mastcam", match: /MCZ|MAST/i },
+  { id: "Driving · Navcam", match: /NAV/i },
+  { id: "Wheels & ground · Hazcam", match: /HAZ/i },
+  { id: "Arm & close-up · WATSON, MAHLI, SHERLOC, PIXL, CacheCam", match: /WATSON|MAHLI|SHERLOC|PIXL|CACHE|MARDI/i },
+  { id: "Laser & spectroscopy · SuperCam, ChemCam", match: /SUPERCAM|CHEMCAM/i },
+  { id: "Sky & weather · SkyCam", match: /SKY|MEDA/i },
+];
+const OTHER_GROUP = "Other cameras";
+const cameraGroup = (name: string) => CAMERA_GROUPS.find((g) => g.match.test(name))?.id ?? OTHER_GROUP;
+const groupRank = (name: string) => {
+  const k = CAMERA_GROUPS.findIndex((g) => g.match.test(name));
+  return k === -1 ? CAMERA_GROUPS.length : k;
+};
+
+/** Newest sol and the sol before it: up to two frames from every camera, arranged by camera group. */
+function bySol<T extends { sol: number }>(items: T[], camera: (item: T) => string, take = 14) {
   const sols = [...new Set(items.map((i) => i.sol))].sort((a, b) => b - a);
   const pick = (sol: number | undefined) => {
     if (sol === undefined) return [];
     const seen = new Map<string, number>();
-    return items.filter((item) => {
-      if (item.sol !== sol) return false;
-      const n = seen.get(camera(item)) ?? 0;
-      seen.set(camera(item), n + 1);
-      return n < 2;
-    }).slice(0, take);
+    return items
+      .filter((item) => {
+        if (item.sol !== sol) return false;
+        const n = seen.get(camera(item)) ?? 0;
+        seen.set(camera(item), n + 1);
+        return n < 2;
+      })
+      .sort((a, b) => groupRank(camera(a)) - groupRank(camera(b)))
+      .slice(0, take);
   };
   return { latest: sols[0], previous: sols[1], now: pick(sols[0]), before: pick(sols[1]) };
 }
@@ -67,8 +91,26 @@ async function mars() {
     full: i.image_files.full_res,
     title: `Sol ${i.sol} · ${i.camera.instrument.replaceAll("_", " ")}`,
     by: "Perseverance",
+    group: cameraGroup(i.camera.instrument),
   });
-  const fromMsl = (i: MslImage): Item => ({ t: i.date_taken, received: i.date_received, src: i.https_url, full: i.https_url, title: `Sol ${i.sol} · ${i.instrument.replaceAll("_", " ")}`, by: "Curiosity" });
+  const fromMsl = (i: MslImage): Item => ({ t: i.date_taken, received: i.date_received, src: i.https_url, full: i.https_url, title: `Sol ${i.sol} · ${i.instrument.replaceAll("_", " ")}`, by: "Curiosity", group: cameraGroup(i.instrument) });
+  // If JPL's raw-image feeds are down or have moved, still show the rovers: newest rover pictures from the NASA Image Library.
+  if (!perseverance.now.length && !curiosity.now.length) {
+    const library = await archive(["Perseverance rover", "Curiosity rover"], /\b(Perseverance|Curiosity)\b/i);
+    const pics = library.images;
+    return {
+      imagery: {
+        now: pics.slice(0, 4),
+        before: pics.slice(4, 8),
+        nowLabel: "Rover raw-image feeds unreachable · newest rover pictures from the NASA Image Library",
+        beforeLabel: "Earlier rover pictures · NASA Image Library",
+        note: "JPL's live raw-image feeds did not answer, so these are NASA's newest published rover images instead of today's raw frames. The panel switches back automatically when the feeds return.",
+      },
+      weather: (weather?.soles ?? []).slice(0, 7).map((s) => ({
+        sol: s.sol, date: s.terrestrial_date, min: s.min_temp, max: s.max_temp, pressure: s.pressure, ground_min: s.min_gts_temp, ground_max: s.max_gts_temp, uv: s.local_uv_irradiance_index, opacity: s.atmo_opacity, ls: s.ls,
+      })),
+    };
+  }
   return {
     imagery: {
       now: [...perseverance.now.map(fromM2020), ...curiosity.now.map(fromMsl)],

@@ -572,8 +572,40 @@ export default function SolarSystem({ compact = false }: { compact?: boolean } =
       const r = body.planet.size;
       const lat = (spec.lat * Math.PI) / 180;
       const lon = (spec.lon * Math.PI) / 180;
-      const pin = new THREE.Mesh(own(new THREE.ConeGeometry(r * 0.12, r * 0.35, 8)), own(new THREE.MeshBasicMaterial({ color: 0xfbbf24 })));
-      pin.position.set(Math.cos(lat) * Math.cos(lon) * r * 1.08, Math.sin(lat) * r * 1.08, -Math.cos(lat) * Math.sin(lon) * r * 1.08);
+      // A small six-wheeled rover (body deck, wheels, camera mast, RTG power unit at the back), greatly enlarged so it can
+      // be seen on the planet; +Y is "up" from the surface. A soft yellow halo keeps it findable from far away.
+      const pin = new THREE.Group();
+      const s = r * 0.16;
+      const hull = own(new THREE.MeshLambertMaterial({ color: 0xe5e7eb, emissive: 0x334155 }));
+      const dark = own(new THREE.MeshLambertMaterial({ color: 0x475569, emissive: 0x111827 }));
+      const gold = own(new THREE.MeshLambertMaterial({ color: 0xfbbf24, emissive: 0x7c5a10 }));
+      const deck = new THREE.Mesh(own(new THREE.BoxGeometry(s * 1.6, s * 0.35, s * 1.1)), hull);
+      deck.position.y = s * 0.75;
+      pin.add(deck);
+      const wheelGeo = own(new THREE.CylinderGeometry(s * 0.22, s * 0.22, s * 0.18, 14));
+      for (const x of [-0.65, 0, 0.65]) {
+        for (const z of [-0.62, 0.62]) {
+          const wheel = new THREE.Mesh(wheelGeo, dark);
+          wheel.rotation.x = Math.PI / 2;
+          wheel.position.set(x * s, s * 0.22, z * s);
+          pin.add(wheel);
+        }
+      }
+      const mast = new THREE.Mesh(own(new THREE.CylinderGeometry(s * 0.05, s * 0.05, s * 0.9, 8)), hull);
+      mast.position.set(s * 0.55, s * 1.35, s * 0.3);
+      pin.add(mast);
+      const head = new THREE.Mesh(own(new THREE.BoxGeometry(s * 0.35, s * 0.18, s * 0.25)), dark);
+      head.position.set(s * 0.6, s * 1.85, s * 0.3);
+      pin.add(head);
+      const rtg = new THREE.Mesh(own(new THREE.CylinderGeometry(s * 0.14, s * 0.18, s * 0.5, 10)), gold);
+      rtg.rotation.z = Math.PI / 3;
+      rtg.position.set(-s * 0.95, s * 0.95, 0);
+      pin.add(rtg);
+      const halo = new THREE.Mesh(own(new THREE.RingGeometry(s * 1.3, s * 1.5, 32)), own(new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.55, side: THREE.DoubleSide })));
+      halo.rotation.x = -Math.PI / 2;
+      halo.position.y = s * 0.05;
+      pin.add(halo);
+      pin.position.set(Math.cos(lat) * Math.cos(lon) * r * 1.0, Math.sin(lat) * r * 1.0, -Math.cos(lat) * Math.sin(lon) * r * 1.0);
       pin.lookAt(pin.position.clone().multiplyScalar(2));
       pin.rotateX(Math.PI / 2);
       body.spinner.add(pin);

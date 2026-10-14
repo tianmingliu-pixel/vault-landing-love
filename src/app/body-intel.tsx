@@ -12,7 +12,7 @@ export type BodyLink = {
   station: string; dish: string; code: string; name: string; downRate: number; band: string; activity: string; power: number | null; rangeKm: number | null;
 };
 
-type Item = { t: string; received?: string; src: string; full?: string; title: string; by: string };
+type Item = { t: string; received?: string; src: string; full?: string; title: string; by: string; group?: string };
 type Video = { t: string; title: string; thumb: string; mp4: string; page: string };
 type MoonGeo = { time: string; phase: number; age: number; diameter: number; distance: number; subearth_lon: number; subearth_lat: number; posangle: number };
 type Weather = { sol: string; date: string; min: string; max: string; pressure: string; ground_min: string; ground_max: string; uv: string; opacity: string; ls: string };
@@ -161,16 +161,44 @@ function Frames({ items, movie, onOpen }: { items: Item[]; movie?: boolean; onOp
       </div>
     );
   }
+  // Rover frames come tagged with a camera group: show each group as its own tidy row, in the order the API sent them.
+  if (items.some((item) => item.group)) {
+    const groups: { id: string; items: Item[] }[] = [];
+    for (const item of items) {
+      const id = item.group ?? "Other cameras";
+      const row = groups.find((g) => g.id === id);
+      if (row) row.items.push(item);
+      else groups.push({ id, items: [item] });
+    }
+    return (
+      <div className="space-y-2">
+        {groups.map((g) => (
+          <div key={g.id}>
+            <p className="mb-0.5 flex items-baseline justify-between gap-2 font-mono text-[9px] text-slate-400">
+              <span className="truncate uppercase tracking-wider text-sky-200/80">{g.id}</span>
+              <span className="shrink-0 text-slate-600">{g.items.length} frame{g.items.length === 1 ? "" : "s"}</span>
+            </p>
+            <FrameGrid items={g.items} onOpen={onOpen} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <FrameGrid items={items} onOpen={onOpen} />;
+}
+
+function FrameGrid({ items, onOpen }: { items: Item[]; onOpen: (item: Item) => void }) {
   return (
     <div className="grid grid-cols-4 gap-1">
-      {items.map((item) => {
+      {items.map((item, k) => {
         const delay = item.received ? (Date.parse(item.received) - Date.parse(item.t)) / 1000 : null;
+        const camera = item.group ? item.title.split(" · ").slice(1).join(" · ") : "";
         return (
-          <button key={item.src} type="button" onClick={() => onOpen(item)} className="group relative aspect-square overflow-hidden rounded bg-black text-left" title={`${item.by} · ${item.title}\ntaken ${utc(item.t)}${item.received ? `\nreceived ${utc(item.received)}` : ""}`}>
+          <button key={`${item.src}-${k}`} type="button" onClick={() => onOpen(item)} className="group relative aspect-square overflow-hidden rounded bg-black text-left" title={`${item.by} · ${item.title}\ntaken ${utc(item.t)}${item.received ? `\nreceived ${utc(item.received)}` : ""}`}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={item.src} alt={`${item.by} ${item.title}`} className="h-full w-full object-cover transition group-hover:scale-105" />
             <span className="absolute inset-x-0 bottom-0 truncate bg-black/70 px-1 font-mono text-[8px] text-slate-200">
-              {item.by.slice(0, 5)} {utc(item.t).slice(11, 16)}
+              {item.by.slice(0, 5)} {camera ? `${camera} ` : ""}{utc(item.t).slice(11, 16)}
               {delay !== null ? ` ⇣${duration(delay).replace(/ \d+ s$/, "")}` : ""}
             </span>
           </button>

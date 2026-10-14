@@ -24,3 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Earth backup TV: soft cross-fade when a new image arrives. */
+@keyframes fadein {
+  from { opacity: 0.25; }
+  to { opacity: 1; }
+}
